@@ -1,6 +1,6 @@
-########################################################################################################
+####################################################################################################
 # The RWKV Language Model - https://github.com/BlinkDL/RWKV-LM
-########################################################################################################
+####################################################################################################
 
 import os
 import logging, types
@@ -210,7 +210,7 @@ if __name__ == '__main__':
 
     if os.environ['RWKV_DEEPSPEED'] == '0':
         if os.environ['RWKV_FLOAT_MODE'] == 'fp16':
-            trainer = Trainer(devices=NUM_GPUS, accelerator="gpu", precision=16)            
+            trainer = Trainer(devices=NUM_GPUS, accelerator="gpu", precision=16)
         elif os.environ['RWKV_FLOAT_MODE'] == 'bf16':
             trainer = Trainer(devices=NUM_GPUS, accelerator="gpu", precision='bf16')
         elif '32' in os.environ['RWKV_FLOAT_MODE']:

@@ -56,9 +56,7 @@ class Dataset(Dataset):
         return self.epoch_length_fixed // NUM_GPUS
 
     def __getitem__(self, idx):
-        #
         # we are cheating: pick a random spot in dataset
-        #
         i = np.random.randint(0, self.data_size - (self.ctx_len + 1))
         if 'MMapIndexedDataset' in str(type(self.data)):
             dix = self.data.get(idx=0, offset=i, length=self.ctx_len + 1).astype(int)
@@ -66,7 +64,7 @@ class Dataset(Dataset):
             dix = self.data[i:i+self.ctx_len+1]
         else:
             dix = [self.stoi[s] for s in self.data[i:i+self.ctx_len+1]]
-        
+
         x = torch.tensor(dix[:-1], dtype=torch.long)
         y = torch.tensor(dix[1:], dtype=torch.long)
         return x, y

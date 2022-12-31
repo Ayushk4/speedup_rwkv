@@ -82,14 +82,14 @@ top_p_newline = 0.9 # only used in TOKEN_MODE = char
 
 DEBUG_DEBUG = False  # True False --> show softmax output
 
-########################################################################################################
+################################################################################################
 
 print(f'Loading {MODEL_NAME}...')
 from src.model_run import RWKV_RNN
 model = RWKV_RNN(MODEL_NAME, os.environ['RWKV_RUN_DEVICE'], model_type, n_layer, n_embd, ctx_len)
 tokenizer = TOKENIZER(WORD_NAME, UNKNOWN_CHAR=UNKNOWN_CHAR)
 
-########################################################################################################
+################################################################################################
 
 if tokenizer.charMode:
     context = tokenizer.refine_context(context)

@@ -1,0 +1,2 @@
+os environ variables
+VOCAB_SIZE

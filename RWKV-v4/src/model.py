@@ -15,8 +15,11 @@ except:
 
 logger = logging.getLogger(__name__)
 
+KD_TEMPERATURE = 1.5
 RWKV_HEAD_QK_DIM = 0
 print(f'\nRWKV_HEAD_QK_DIM {RWKV_HEAD_QK_DIM}\n')
+
+kd_loss = nn.KLDivLoss(reduction='mean')
 
 class L2Wrap(torch.autograd.Function):
     @staticmethod
@@ -33,16 +36,17 @@ class L2Wrap(torch.autograd.Function):
         gy.scatter_(-1, ids, maxx * factor)
         return (grad_output, gy)
 
-########################################################################################################
+##############################################################################################
 # CUDA Kernel
-########################################################################################################
+##############################################################################################
 
 T_MAX = 1024 # increase this if your ctx_len is long [NOTE: TAKES LOTS OF VRAM!]
-# it's possible to go beyond CUDA limitations if you slice the ctx and pass the hidden state in each slice
+# it's possible to go beyond CUDA limitations if you slice ctx and pass hidden state in each slice
 
 from torch.utils.cpp_extension import load
-wkv_cuda = load(name="wkv", sources=["cuda/wkv_op.cpp", "cuda/wkv_cuda.cu"],
-                verbose=True, extra_cuda_cflags=['-res-usage', '--maxrregcount 60', '--use_fast_math', '-O3', '-Xptxas -O3', f'-DTmax={T_MAX}'])
+wkv_cuda = load(name="wkv", sources=["cuda/wkv_op.cpp", "cuda/wkv_cuda.cu"], verbose=True,
+                extra_cuda_cflags=['-res-usage', '--maxrregcount 60', '--use_fast_math',
+                                   '-O3', '-Xptxas -O3', f'-DTmax={T_MAX}'])
 
 class WKV(torch.autograd.Function):
     @staticmethod
@@ -100,13 +104,13 @@ class WKV(torch.autograd.Function):
 def RUN_CUDA(B, T, C, w, u, k, v):
     return WKV.apply(B, T, C, w.cuda(), u.cuda(), k.cuda(), v.cuda())
 
-########################################################################################################
+#############################################################################################
 # RWKV: RWKV Time-mix + RWKV Channel-mix
-########################################################################################################
+#############################################################################################
 
-def RWKV_Init(model, args):  # fancy initialization of all lin & emb layer in the model
+def RWKV_Init(model, args): # fancy initialization of all lin & emb layer in the model
     print("\n[--> first run, init model params (very slow for large models) <--]")
-    print("[so you shall only do it for 1 single GPU and save the checkpt and load it when using multiple GPU]\n")
+    print("[so do it only for 1 single GPU, save checkpt and load it when using multiple GPU]\n")
 
     for mm in model.modules():
         if "RecursiveScriptModule" in str(type(mm)):
@@ -270,9 +274,9 @@ class RWKV_ChannelMix(torch.jit.ScriptModule):
         rkv = torch.sigmoid(self.receptance(xr)) * kv
         return rkv
 
-########################################################################################################
+#############################################################################################
 # The GPT Model with our blocks
-########################################################################################################
+#############################################################################################
 
 
 class GPTConfig:
@@ -339,7 +343,7 @@ class GPT(nn.Module):
 
         try:
             if os.environ['RWKV_LOAD_MODEL'] == str(False):
-                RWKV_Init(self, config) 
+                RWKV_Init(self, config)
         except:
             pass
 
@@ -379,7 +383,7 @@ class GPT(nn.Module):
 
         return optimizer
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, teacher_logits=None):
         idx = idx.to(self.emb.weight.device)
 
         self.step += 1
@@ -395,7 +399,7 @@ class GPT(nn.Module):
             k = self.head_k(x)[:, :T, :]
             c = (q @ k.transpose(-2, -1)) * (1.0 / RWKV_HEAD_QK_DIM)
             c = c.masked_fill(self.copy_mask[:T, :T] == 0, 0)
-            
+
             if '32' in os.environ['RWKV_FLOAT_MODE']:
                 c = c @ F.one_hot(idx, num_classes=self.config.vocab_size)
             elif os.environ['RWKV_FLOAT_MODE'] == 'fp16':
@@ -409,6 +413,11 @@ class GPT(nn.Module):
 
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(x.view(-1, x.size(-1)), targets.to(x.device).view(-1))
+            loss = F.cross_entropy(x.view(-1, x.size(-1)),
+                                   targets.to(x.device).view(-1))
+            if teacher_logits is not None:
+                loss += kd_loss(
+                    F.log_softmax(x / KD_TEMPERATURE, dim=-1),
+                    F.softmax(teacher_logits / KD_TEMPERATURE, dim=-1))
 
         return L2Wrap.apply(loss, x)

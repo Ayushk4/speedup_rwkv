@@ -14,6 +14,7 @@ import datetime
 import math
 from pytorch_lightning.lite import LightningLite
 import gc
+from prune_utils import Pruner
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +57,12 @@ class Trainer(LightningLite):
     def run(self, m_cfg, train_dataset, test_dataset, config):
         self.cuda_id = int(str(self.device).strip('cuda:'))
         print('[0]')
-        model = GPT(GPTConfig(train_dataset.vocab_size, train_dataset.ctx_len, model_type=m_cfg.model_type,
-                        n_layer=m_cfg.n_layer, n_embd=m_cfg.n_embd))
+        model = GPT(GPTConfig(
+            train_dataset.vocab_size, train_dataset.ctx_len, model_type=m_cfg.model_type,
+            n_layer=m_cfg.n_layer, n_embd=m_cfg.n_embd))
+        teacher_model = GPT(GPTConfig(
+            train_dataset.vocab_size, train_dataset.ctx_len, model_type=m_cfg.model_type,
+            n_layer=m_cfg.n_layer, n_embd=m_cfg.n_embd))
         print('[1]')
         with torch.no_grad():
             if m_cfg.LOAD_MODEL:
@@ -66,8 +71,21 @@ class Trainer(LightningLite):
                 model.load_state_dict(m2)
                 del m2
         model.to(self.device)
+        iterative_pruner = Pruner()
+        model = iterative_pruner.init_prune(model)
+        print('[2]')
+        with torch.no_grad():
+            if m_cfg.LOAD_MODEL:
+                print('loading teacher', m_cfg.TEACHER_MODEL_NAME)
+                m2 = torch.load(m_cfg.TEACHER_MODEL_NAME + '.pth', map_location='cpu')
+                teacher_model.load_state_dict(m2)
+                del m2
+                for p in teacher_model.parameters():
+                    p.requires_grad = False
+        teacher_model.to(self.device)
 
         self.model = model
+        self.teacher_model = teacher_model
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
         self.config = config
@@ -92,13 +110,16 @@ class Trainer(LightningLite):
         model, optimizer = self.setup(model, optimizer)
         print('[3]')
 
-        def run_epoch(split):
+        self.tokens = 0  # counter used for learning rate decay
+        self.num_updates = 0 # counter used for pruning
+        for epoch in range(99999999):
+
             is_train = split == 'train'
             model.train(is_train)
             data = self.train_dataset if is_train else self.test_dataset
             data.idx_begin = self.steps * config.batch_size + 1
             data.cuda_id = self.cuda_id
-            
+
             if config.num_workers > 0:
                 loader = DataLoader(data, shuffle=False, pin_memory=True,
                                     batch_size=config.batch_size // NUM_GPUS,
@@ -116,7 +137,9 @@ class Trainer(LightningLite):
             
             for it, (x, y) in pbar:
                 with torch.set_grad_enabled(is_train):
-                    loss = model(x, y) # forward the model
+                    with torch.no_grad():
+                        teacher_logits = self.teacher_model(x)
+                    loss = model(x, y, teacher_logits) # forward the model
 
                 if os.environ['RWKV_DEEPSPEED'] == '0':
                     all_loss = [loss.clone()]
@@ -124,57 +147,63 @@ class Trainer(LightningLite):
                     all_loss = [loss.clone() for _ in range(NUM_GPUS)]
                     torch.distributed.all_gather(all_loss, loss)
 
-                if is_train:  # backprop and update the parameters
-                    model.zero_grad()
-                    self.backward(loss)
+                # backprop and update the parameters
+                model.zero_grad()
+                self.backward(loss)
 
-                    # deepspeed will handle gradient_clipping
+                # deepspeed will handle gradient_clipping
+                optimizer.step()
 
-                    optimizer.step()
-
-                    # decay the learning rate based on our progress
-                    self.tokens += (y >= 0).sum() # number of tokens processed this step (i.e. label is not -100)
-                    lr_final_factor = config.lr_final / config.learning_rate
-                    if self.tokens < config.warmup_tokens:
-                        # linear warmup
-                        lr_mult = lr_final_factor + \
-                            (1 - lr_final_factor) * float(self.tokens) / \
-                            float(config.warmup_tokens)
-                        progress = 0
+                # decay the learning rate based on our progress
+                self.tokens += (y >= 0).sum() # number of tokens processed this step (i.e. label is not -100)
+                lr_final_factor = config.lr_final / config.learning_rate
+                if self.tokens < config.warmup_tokens:
+                    # linear warmup
+                    lr_mult = lr_final_factor + \
+                        (1 - lr_final_factor) * float(self.tokens) / \
+                        float(config.warmup_tokens)
+                    progress = 0
+                else:
+                    # exponential learning rate decay
+                    progress = float(self.tokens - config.warmup_tokens) / float(max(1, config.final_tokens - config.warmup_tokens))
+                    if progress >= 1:
+                        lr_mult = lr_final_factor
                     else:
-                        # exponential learning rate decay
-                        progress = float(self.tokens - config.warmup_tokens) / float(max(1, config.final_tokens - config.warmup_tokens))
-                        if progress >= 1:
-                            lr_mult = lr_final_factor
-                        else:
-                            lr_mult = math.exp(math.log(lr_final_factor) * pow(progress, 1))
-                    lr = config.learning_rate * lr_mult
+                        lr_mult = math.exp(math.log(lr_final_factor) * pow(progress, 1))
+                lr = config.learning_rate * lr_mult
 
-                    for param_group in optimizer.param_groups:
-                        param_group['lr'] = lr
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = lr
 
-                    self.lr = lr
-                    self.steps += 1
-                    
-                    now_loss = 0
-                    for gg in range(NUM_GPUS):
-                        now_loss += all_loss[gg].item()
-                    now_loss = now_loss / NUM_GPUS # report progress                    
-                    if USE_WANDB and self.cuda_id == 0:
-                        wandb.log({"loss": now_loss}, step = self.steps)
+                self.lr = lr
+                self.steps += 1
+                
+                now_loss = 0
+                for gg in range(NUM_GPUS):
+                    now_loss += all_loss[gg].item()
+                now_loss = now_loss / NUM_GPUS # report progress                    
+                if USE_WANDB and self.cuda_id == 0:
+                    wandb.log({"loss": now_loss}, step = self.steps)
 
-                    if self.avg_loss < 0:
-                        self.avg_loss = now_loss
-                    else:
-                        factor = 1 / (it + 1)
-                        self.avg_loss = self.avg_loss * (1.0 - factor) + now_loss * factor
+                if self.avg_loss < 0:
+                    self.avg_loss = now_loss
+                else:
+                    factor = 1 / (it + 1)
+                    self.avg_loss = self.avg_loss * (1.0 - factor) + now_loss * factor
 
-                    pbar.set_description(f"miniE {epoch+1+self.EPOCH_BEGIN} s {self.steps} prog {progress*100.0:.2f}% : ppl {math.exp(self.avg_loss):.6f} loss {self.avg_loss:.6f} lr {lr:e}")
+                pbar.set_description(f"miniE {epoch+1+self.EPOCH_BEGIN} s {self.steps} prog {progress*100.0:.2f}% : ppl {math.exp(self.avg_loss):.6f} loss {self.avg_loss:.6f} lr {lr:e}")
 
-        self.tokens = 0  # counter used for learning rate decay
-        for epoch in range(99999999):
+            # Update iterative pruner and check if pruning is needed.
+            iterative_pruner.update_iter_steps(
+                num_steps_since_last_log=self.num_updates)
+            if iterative_pruner.is_it_time_to_prune():
+                # Save the model before pruning.
+                save_path = self.config.epoch_save_path + f"pruned_{(iterative_pruner.times_pruned)}.pt"
+                torch.save(raw_model.state_dict(), save_path)
+                # Prune the model.
+                iterative_pruner.prune_model(model=model)
+            assert not iterative_pruner.should_prune()
 
-            run_epoch('train')
             if math.isnan(self.avg_loss):
                 exit(0)
 
