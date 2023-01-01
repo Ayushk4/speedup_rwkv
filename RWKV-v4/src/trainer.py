@@ -114,7 +114,7 @@ class Trainer(LightningLite):
         self.num_updates = 0 # counter used for pruning
         for epoch in range(99999999):
 
-            is_train = split == 'train'
+            is_train = True
             model.train(is_train)
             data = self.train_dataset if is_train else self.test_dataset
             data.idx_begin = self.steps * config.batch_size + 1
@@ -198,6 +198,7 @@ class Trainer(LightningLite):
                 num_steps_since_last_log=self.num_updates)
             if iterative_pruner.is_it_time_to_prune():
                 # Save the model before pruning.
+                model.zero_grad()
                 save_path = self.config.epoch_save_path + f"pruned_{(iterative_pruner.times_pruned)}.pt"
                 torch.save(raw_model.state_dict(), save_path)
                 # Prune the model.
