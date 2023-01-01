@@ -170,7 +170,7 @@ class Trainer(LightningLite):
                         lr_mult = lr_final_factor
                     else:
                         lr_mult = math.exp(math.log(lr_final_factor) * pow(progress, 1))
-                lr = config.learning_rate * lr_mult
+                lr = config.learning_rate * 1.0 # lr_mult
 
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
@@ -200,7 +200,8 @@ class Trainer(LightningLite):
                 if iterative_pruner.is_it_time_to_prune():
                     # Save the model before pruning.
                     model.zero_grad()
-                    save_path = self.config.epoch_save_path + f"pruned_{(iterative_pruner.times_pruned)}.pt"
+                    save_path =  f"../../../pruned_{(iterative_pruner.times_pruned)}.pt"
+                    print("Saving model to: ", save_path)
                     torch.save(raw_model.state_dict(), save_path)
                     # Prune the model.
                     iterative_pruner.prune_model(model=model)
