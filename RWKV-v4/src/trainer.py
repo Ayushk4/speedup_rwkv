@@ -193,17 +193,19 @@ class Trainer(LightningLite):
 
                 pbar.set_description(f"miniE {epoch+1+self.EPOCH_BEGIN} s {self.steps} prog {progress*100.0:.2f}% : ppl {math.exp(self.avg_loss):.6f} loss {self.avg_loss:.6f} lr {lr:e}")
 
-            # Update iterative pruner and check if pruning is needed.
-            iterative_pruner.update_iter_steps(
-                num_steps_since_last_log=self.num_updates)
-            if iterative_pruner.is_it_time_to_prune():
-                # Save the model before pruning.
-                model.zero_grad()
-                save_path = self.config.epoch_save_path + f"pruned_{(iterative_pruner.times_pruned)}.pt"
-                torch.save(raw_model.state_dict(), save_path)
-                # Prune the model.
-                iterative_pruner.prune_model(model=model)
-            assert not iterative_pruner.should_prune()
+                self.num_updates += 1
+
+                # Update iterative pruner and check if pruning is needed.
+                iterative_pruner.update_iter_steps(
+                    num_steps_since_last_log=self.num_updates)
+                if iterative_pruner.is_it_time_to_prune():
+                    # Save the model before pruning.
+                    model.zero_grad()
+                    save_path = self.config.epoch_save_path + f"pruned_{(iterative_pruner.times_pruned)}.pt"
+                    torch.save(raw_model.state_dict(), save_path)
+                    # Prune the model.
+                    iterative_pruner.prune_model(model=model)
+                assert not iterative_pruner.should_prune(), (iterative_pruner.breakpoints, self.num_updates)
 
             if math.isnan(self.avg_loss):
                 exit(0)
