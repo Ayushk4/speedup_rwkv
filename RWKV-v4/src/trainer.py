@@ -35,7 +35,7 @@ class TrainerConfig:
     warmup_tokens = 0
     final_tokens = 0
     epoch_save_frequency = 0
-    epoch_save_path = 'trained-'
+    epoch_save_path = '../../trained-'
     num_workers = 0  # for DataLoader
 
     def __init__(self, **kwargs):
