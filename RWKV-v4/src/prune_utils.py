@@ -110,6 +110,7 @@ class Pruner:
 
         Detects if model already has zero weights, and uses it to generate masks.
         """
+        print(type(model))
         parameters_to_prune = [(layer, 'weight') for layer_pattern in self.layer_patterns
                                for layer in _get_attr_from_custom_pattern(model, layer_pattern)]
         num_prune_params = [layer.weight.data.nelement() - torch.sum(layer.weight.data == 0) # pylint: disable=no-member

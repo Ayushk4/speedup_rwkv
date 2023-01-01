@@ -308,7 +308,7 @@ class Block(nn.Module):
 
     def forward(self, x):
         if self.layer_id == 0:
-            x = self.ln0(x)        
+            x = self.ln0(x)
         if self.layer_id == 0 and self.config.model_type == 'RWKV-ffnPre':
             x = x + self.ffnPre(self.ln1(x))  # better in some cases
         else:
