@@ -30,12 +30,12 @@ EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-169M'
 # EXPRESS_PILE_MODEL_NAME = 'RWKV-4-Pile-430M-20220808-8066'
 # EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-430M'
 # EXPRESS_PILE_MODEL_NAME = 'RWKV-4-Pile-1B5-20220903-8040'
-# EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-1B5'
+#moEXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-1B5'
 
 ########################################################################################################
 
-datafile = "../data/enwik8" # your data
-datafile_encoding = 'utf-8' # 'utf-8' / 'utf-16le' / 'numpy' (for fine-tuning pile models) / 'binidx' (the Megatron-LM 'binidx' format)
+datafile = "../data/pile_00/pile_00_text_document" # your data
+datafile_encoding = 'binidx' # 'utf-8' / 'utf-16le' / 'numpy' (for fine-tuning pile models) / 'binidx' (the Megatron-LM 'binidx' format)
 
 # datafile = 'my-gpt_seq_document'
 # datafile_encoding = 'binidx'
