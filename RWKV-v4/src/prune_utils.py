@@ -17,7 +17,7 @@ class PruneRecipe:
             'module.blocks.*.ffn.key.weight',
             'module.blocks.*.ffn.receptance.weight',
             'module.blocks.*.ffn.value.weight']
-        self.amounts, self.breakpoints = list(zip([
+        self.amounts, self.breakpoints = zip(*[
             (0.1, 100),
             (0.1, 500),
             (0.1, 1000),
@@ -27,11 +27,13 @@ class PruneRecipe:
             (0.08, 9000),
             (0.07, 13000),
             (0.07, 18000),
-            (0.06, 6000),
-            (0.06, 9000),
-            (0.05, 13000),
-            (0.05, 18000),
-        ]))
+            (0.06, 26000),
+            (0.06, 35000),
+            (0.05, 45000),
+            (0.05, 60000),
+        ])
+        self.amounts = list(self.amounts)
+        self.breakpoints = list(self.breakpoints)
 
 def _get_attr_from_custom_pattern(layer, attr_pattern: Union[str, List[str]], idx=0):
     """Get the attribute of the layer that matches the regex.
