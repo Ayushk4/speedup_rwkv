@@ -24,7 +24,8 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 
 EXPRESS_PILE_MODE = False # True: express mode for fine-tuning a pile model // False: usual training
 
-EXPRESS_PILE_MODEL_NAME = 'RWKV-4-Pile-169M-20220807-8023'
+EXPRESS_PILE_MODEL_NAME = 'RWKV-4-169M'
+TEACHER_MODEL_NAME = '../../RWKV-4-169M'
 EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-169M'
 # EXPRESS_PILE_MODEL_NAME = 'RWKV-4-Pile-430M-20220808-8066'
 # EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-430M'
@@ -207,6 +208,7 @@ if __name__ == '__main__':
     m_cfg.EPOCH_BEGIN = EPOCH_BEGIN
     m_cfg.LOAD_MODEL = LOAD_MODEL
     m_cfg.MODEL_NAME = MODEL_NAME
+    m_cfg.TEACHER_MODEL_NAME = TEACHER_MODEL_NAME
 
     if os.environ['RWKV_DEEPSPEED'] == '0':
         if os.environ['RWKV_FLOAT_MODE'] == 'fp16':
