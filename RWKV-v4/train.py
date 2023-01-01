@@ -22,7 +22,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 # Step 1: set training data & cfg
 ########################################################################################################
 
-EXPRESS_PILE_MODE = False # True: express mode for fine-tuning a pile model // False: usual training
+EXPRESS_PILE_MODE = True: express mode for fine-tuning a pile model // False: usual training
 
 EXPRESS_PILE_MODEL_NAME = 'RWKV-4-169M'
 TEACHER_MODEL_NAME = '../../RWKV-4-169M'
@@ -49,7 +49,7 @@ if EXPRESS_PILE_MODE:
 # set VOCAB_SIZE = 50277 for fine-tuning pile models
 # set VOCAB_SIZE = your_vocab_size for 'binidx' data
 #
-os.environ['VOCAB_SIZE'] = '0'
+# os.environ['VOCAB_SIZE'] = '0'
 if EXPRESS_PILE_MODE:
     os.environ['VOCAB_SIZE'] = '50277'
 
@@ -73,14 +73,14 @@ os.environ['RWKV_DEEPSPEED'] = '1' # Use DeepSpeed? 0 = False, 1 = True
 if int(os.environ['RWKV_NUM_GPUS']) == 1: # Usually you don't need DeepSpeed for 1 GPU training.
     os.environ['RWKV_DEEPSPEED'] = '0'    # However, sometimes it saves VRAM even for 1 GPU training.
 
-os.environ['USE_WANDB'] = '0' # wandb logging. 0 = False, 1 = True
+os.environ['USE_WANDB'] = '1' # wandb logging. 0 = False, 1 = True
 
 ########################################################################################################
 # Step 2: set model details
 ########################################################################################################
 
 EPOCH_BEGIN = 0 # begins with miniEpoch = EPOCH_BEGIN
-LOAD_MODEL = False # shall we load the #EPOCH_BEGIN model and continue the training from it?
+LOAD_MODEL = True # shall we load the #EPOCH_BEGIN model and continue the training from it?
 
 n_layer = 6
 n_embd = 512
@@ -147,7 +147,7 @@ if EXPRESS_PILE_MODE:
 ### misc stuffs ################################################################################
 
 if LOAD_MODEL and EPOCH_BEGIN > 0: # we are not saving gradients, so we warmup if we load a model
-    warmup_tokens = 50 * ctx_len * batch_size // NUM_GPUS
+    warmup_tokens = 50 * ctx_len * batch_size
 else:
     warmup_tokens = 0
 

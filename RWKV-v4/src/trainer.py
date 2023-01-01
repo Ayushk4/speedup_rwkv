@@ -14,7 +14,7 @@ import datetime
 import math
 from pytorch_lightning.lite import LightningLite
 import gc
-from prune_utils import Pruner
+from src.prune_utils import Pruner
 
 logger = logging.getLogger(__name__)
 
