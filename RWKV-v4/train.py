@@ -22,7 +22,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 # Step 1: set training data & cfg
 ########################################################################################################
 
-EXPRESS_PILE_MODE = True: express mode for fine-tuning a pile model // False: usual training
+EXPRESS_PILE_MODE = True #: express mode for fine-tuning a pile model // False: usual training
 
 EXPRESS_PILE_MODEL_NAME = 'RWKV-4-169M'
 TEACHER_MODEL_NAME = '../../RWKV-4-169M'
