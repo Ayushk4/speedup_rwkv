@@ -66,7 +66,7 @@ os.environ['RWKV_NUM_GPUS'] = '1' # num of GPUs to use
 # 'fp16' (fast & will overflow after training a large model for very long. can be solved in the future)
 # 'tf32' (decent speed & stable)
 # 'fp32' (!!!very slow!!! only for verification)
-os.environ['RWKV_FLOAT_MODE'] = 'bf16'
+os.environ['RWKV_FLOAT_MODE'] = 'fp16'
 
 os.environ['RWKV_DEEPSPEED'] = '1' # Use DeepSpeed? 0 = False, 1 = True
 
@@ -84,7 +84,7 @@ LOAD_MODEL = True # shall we load the #EPOCH_BEGIN model and continue the traini
 
 n_layer = 6
 n_embd = 512
-ctx_len = 1024 # increase T_MAX in src/model.py if your ctx_len is longer
+ctx_len = 256 # increase T_MAX in src/model.py if your ctx_len is longer
 
 model_type = 'RWKV' # 'RWKV' or 'RWKV-ffnPre' (sometimes better)
 
@@ -97,7 +97,7 @@ if EXPRESS_PILE_MODE:
     if EXPRESS_PILE_MODEL_TYPE == 'RWKV-4-Pile-169M':
         n_layer = 12
         n_embd = 768
-        ctx_len = 1024
+        ctx_len = 256
     elif EXPRESS_PILE_MODEL_TYPE == 'RWKV-4-Pile-430M':
         n_layer = 24
         n_embd = 1024
