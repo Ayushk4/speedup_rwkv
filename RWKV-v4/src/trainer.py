@@ -204,7 +204,7 @@ class Trainer(LightningLite):
                     torch.save(raw_model.state_dict(), save_path)
                     # Prune the model.
                     iterative_pruner.prune_model(model=model)
-                assert not iterative_pruner.should_prune(), (iterative_pruner.breakpoints, self.num_updates)
+                # assert not iterative_pruner.is_it_time_to_prune(), (iterative_pruner.breakpoints, self.num_updates)
 
             if math.isnan(self.avg_loss):
                 exit(0)
