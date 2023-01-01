@@ -165,7 +165,7 @@ def RWKV_Init(model, args): # fancy initialization of all lin & emb layer in the
                 nn.init.normal_(ww, mean=0.0, std=-scale)
 
 
-class RWKV_TimeMix(torch.jit.ScriptModule):
+class RWKV_TimeMix(nn.Module):#torch.jit.ScriptModule):
     def __init__(self, config, layer_id):
         super().__init__()
         self.layer_id = layer_id
@@ -209,7 +209,7 @@ class RWKV_TimeMix(torch.jit.ScriptModule):
         self.receptance.scale_init = 0
         self.output.scale_init = 0
 
-    @torch.jit.script_method
+    # @torch.jit.script_method
     def jit_func(self, x):
 
         # Mix x with the previous timestep to produce xk, xv, xr
@@ -236,7 +236,7 @@ class RWKV_TimeMix(torch.jit.ScriptModule):
         return rwkv
 
 
-class RWKV_ChannelMix(torch.jit.ScriptModule):
+class RWKV_ChannelMix(nn.Module):#torch.jit.ScriptModule):
     def __init__(self, config, layer_id):
         super().__init__()
         self.layer_id = layer_id
@@ -261,7 +261,7 @@ class RWKV_ChannelMix(torch.jit.ScriptModule):
         self.value.scale_init = 0
         self.receptance.scale_init = 0
 
-    @torch.jit.script_method
+    # @torch.jit.script_method
     def forward(self, x):
         xx = self.time_shift(x)
         xk = x * self.time_mix_k + xx * (1 - self.time_mix_k)

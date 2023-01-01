@@ -10,13 +10,13 @@ from torch.nn.utils import prune as torch_prune # pylint: disable=wrong-import-p
 class PruneRecipe:
     def __init__(self):
         self.layer_patterns = [
-            'module.blocks.*.att.key.weight',
-            'module.blocks.*.att.value.weight',
-            'module.blocks.*.att.receptance.weight',
-            'module.blocks.*.att.output.weight',
-            'module.blocks.*.ffn.key.weight',
-            'module.blocks.*.ffn.receptance.weight',
-            'module.blocks.*.ffn.value.weight']
+            'module.blocks.*.att.key',
+            'module.blocks.*.att.value',
+            'module.blocks.*.att.receptance',
+            'module.blocks.*.att.output',
+            'module.blocks.*.ffn.key',
+            'module.blocks.*.ffn.receptance',
+            'module.blocks.*.ffn.value']
         self.amounts, self.breakpoints = zip(*[
             (0.1, 100),
             (0.1, 500),
