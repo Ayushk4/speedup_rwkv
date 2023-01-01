@@ -40,9 +40,9 @@ datafile_encoding = 'binidx' # 'utf-8' / 'utf-16le' / 'numpy' (for fine-tuning p
 # datafile = 'my-gpt_seq_document'
 # datafile_encoding = 'binidx'
 
-if EXPRESS_PILE_MODE:
-    datafile = 'train.npy' # use 'prepare-data.py' in https://github.com/BlinkDL/RWKV-v2-RNN-Pile/tree/main/RWKV-v3 to tokenize .txt into .npy
-    datafile_encoding = 'numpy'
+# if EXPRESS_PILE_MODE:
+    # datafile = 'train.npy' # use 'prepare-data.py' in https://github.com/BlinkDL/RWKV-v2-RNN-Pile/tree/main/RWKV-v3 to tokenize .txt into .npy
+    # datafile_encoding = 'numpy'
 
 #
 # set VOCAB_SIZE = 0 (auto-compute) if you are training a char-level LM from scratch
