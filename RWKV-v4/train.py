@@ -24,7 +24,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 
 EXPRESS_PILE_MODE = True #: express mode for fine-tuning a pile model // False: usual training
 
-EXPRESS_PILE_MODEL_NAME = 'RWKV-4-169M'
+EXPRESS_PILE_MODEL_NAME = '../../RWKV-4-169M'
 TEACHER_MODEL_NAME = '../../RWKV-4-169M'
 EXPRESS_PILE_MODEL_TYPE = 'RWKV-4-Pile-169M'
 # EXPRESS_PILE_MODEL_NAME = 'RWKV-4-Pile-430M-20220808-8066'
