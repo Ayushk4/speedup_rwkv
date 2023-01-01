@@ -196,8 +196,7 @@ class Trainer(LightningLite):
                 self.num_updates += 1
 
                 # Update iterative pruner and check if pruning is needed.
-                iterative_pruner.update_iter_steps(
-                    num_steps_since_last_log=self.num_updates)
+                iterative_pruner.update_iter_steps(self.num_updates)
                 if iterative_pruner.is_it_time_to_prune():
                     # Save the model before pruning.
                     model.zero_grad()
