@@ -123,9 +123,9 @@ class Pruner:
                                for layer in _get_attr_from_custom_pattern(model, layer_pattern)]
         num_prune_params = [layer.weight.data.nelement() - torch.sum(layer.weight.data == 0) # pylint: disable=no-member
                             for layer, _ in parameters_to_prune]
-        fraction_init_prune = sum(num_prune_params) / sum(
+        fraction_init_prune = 1.0 - sum(num_prune_params) / sum(
             [layer.weight.data.nelement() for layer, _ in parameters_to_prune]) # pylint: disable=no-member
-
+        fraction_init_prune = min(max(0.0, fraction_init_prune), 1.0)
         if self.times_pruned != 0:
             assert abs(fraction_init_prune - self.breakpoints[self.times_pruned - 1]) < 0.01, (
                 "Pruning recipe is not consistent with the model. "
